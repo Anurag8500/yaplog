@@ -24,7 +24,7 @@ const sidebarItems = [
     { label: "Home", href: "/dashboard/home", icon: Home },
     { label: "Talk", href: "/dashboard/talk", icon: Mic },
     { label: "Memory", href: "/dashboard/memory", icon: Brain },
-    { label: "Recall", href: "/dashboard/recall", icon: History },
+    { label: "Ask", href: "/dashboard/ask", icon: History },
     { label: "Guidance", href: "/dashboard/guidance", icon: Compass },
     { label: "Insights", href: "/dashboard/insights", icon: Sparkles },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },

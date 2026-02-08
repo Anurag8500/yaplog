@@ -266,14 +266,16 @@ export default function MemoryPage() {
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-zinc-200 px-6 py-16 md:px-12 lg:px-24 max-w-4xl mx-auto font-sans selection:bg-yellow-500/20 selection:text-yellow-200">
             {/* Page Header */}
-            <header className="mb-16">
-                <h1 className="text-3xl font-medium tracking-tight text-white mb-2">
+            {/* Page Header */}
+            <header className="text-center mb-12 space-y-3 relative z-10">
+                <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-white drop-shadow-xl uppercase">
                     Memory
                 </h1>
-                <p className="text-zinc-500 text-lg font-light">
+                <p className="text-neutral-400 font-medium text-sm tracking-wide opacity-80">
                     Your life, structured and remembered over time.
                 </p>
-                <div className="h-px w-24 bg-gradient-to-r from-yellow-500/50 to-transparent mt-8" />
+                {/* Subtle separator */}
+                <div className="w-12 h-1 bg-yellow-500/20 rounded-full mx-auto mt-6" />
             </header>
 
             {/* Section 1: Today */}
