@@ -1,55 +1,94 @@
-import AuthLayout from "../components/AuthLayout";
+"use client"
 
-export default function SignUp() {
+import { useState } from "react"
+import { signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import AuthLayout from "../components/AuthLayout"
+import { Eye, EyeOff } from "lucide-react"
+
+export default function SignUpPage() {
+  const router = useRouter()
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  })
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+
+    // Basic validation
+    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+      setError("Please fill in all fields")
+      setLoading(false)
+      return
+    }
+
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters")
+      setLoading(false)
+      return
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match")
+      setLoading(false)
+      return
+    }
+
+    try {
+      // Use Auth.js for signup
+      const result = await signIn("credentials", {
+        redirect: false,
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        isSignup: "true",
+      })
+
+      if (result?.error) {
+        // In a real app, we would parse the specific error.
+        // For MVP, we show a generic message or the returned error code.
+        // Note: Custom errors from authorize() might be masked as "CredentialsSignin"
+        setError("Registration failed. The email might already be in use.")
+      } else {
+        router.push("/dashboard/home")
+      }
+    } catch (err: any) {
+      setError("Something went wrong. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <AuthLayout
       leftHeadline="Your mind deserves a better memory."
       leftSubtext="YAPLOG quietly listens, understands, and remembers — so you don’t have to."
-      rightTitle="Create your YAPLOG account"
-      rightSubtitle="Start capturing your life effortlessly."
+      rightTitle="Create your account"
+      rightSubtitle="Your thoughts stay private. Always."
       footerText="Already have an account?"
       footerLinkText="Sign in"
-      footerLinkHref="/signin"
+      footerLinkHref="/login"
     >
-      <form className="space-y-5">
-        <div className="space-y-5">
-          <div className="relative group">
-            <input
-              type="email"
-              placeholder="Email address"
-              className="w-full h-14 px-4 bg-white border border-neutral-200 rounded-lg text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:ring-0 transition-all duration-200 text-base"
-            />
-          </div>
-          <div className="relative group">
-            <input
-              type="password"
-              placeholder="Password"
-              className="w-full h-14 px-4 bg-white border border-neutral-200 rounded-lg text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:ring-0 transition-all duration-200 text-base"
-            />
-          </div>
-          <div className="relative group">
-            <input
-              type="password"
-              placeholder="Confirm password"
-              className="w-full h-14 px-4 bg-white border border-neutral-200 rounded-lg text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:ring-0 transition-all duration-200 text-base"
-            />
-          </div>
-        </div>
-
+      <div className="space-y-6">
+        {/* Continue with Google (Visual Only) */}
         <button
           type="button"
-          className="w-full h-14 bg-neutral-900 text-white font-medium rounded-lg hover:bg-black transition-all duration-200 shadow-lg shadow-neutral-900/10 mt-2 text-base"
+          className="w-full h-14 bg-white border border-neutral-200 text-neutral-700 font-medium rounded-lg hover:bg-neutral-50 transition-all duration-200 flex items-center justify-center gap-3 text-base"
         >
-          Start Yapping
-        </button>
-
-        <div className="my-8 flex items-center gap-4">
-          <div className="h-px bg-neutral-200 flex-1" />
-          <span className="text-neutral-400 text-sm font-medium">or</span>
-          <div className="h-px bg-neutral-200 flex-1" />
-        </div>
-
-        <button className="w-full h-14 bg-white border border-neutral-200 text-neutral-700 font-medium rounded-lg hover:bg-neutral-50 hover:border-neutral-300 transition-all duration-200 flex items-center justify-center gap-3 text-base">
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
               fill="currentColor"
@@ -70,7 +109,93 @@ export default function SignUp() {
           </svg>
           Continue with Google
         </button>
+
+        <div className="flex items-center gap-4">
+          <div className="h-px bg-neutral-200 flex-1" />
+          <span className="text-neutral-400 text-xs font-medium uppercase tracking-wider">
+            Or create account with email
+          </span>
+          <div className="h-px bg-neutral-200 flex-1" />
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+        {error && (
+          <div className="p-3 bg-red-50 text-red-500 text-sm rounded-lg border border-red-100">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div>
+            <input
+              type="text"
+              name="name"
+              placeholder="Your name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full h-14 px-4 bg-white border border-neutral-200 rounded-lg text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:ring-0 transition-all duration-200 text-base"
+              required
+            />
+          </div>
+          <div>
+            <input
+              type="email"
+              name="email"
+              placeholder="Email address"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full h-14 px-4 bg-white border border-neutral-200 rounded-lg text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:ring-0 transition-all duration-200 text-base"
+              required
+            />
+          </div>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="Create password"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full h-14 px-4 bg-white border border-neutral-200 rounded-lg text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:ring-0 transition-all duration-200 text-base pr-12"
+              required
+              minLength={8}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              name="confirmPassword"
+              placeholder="Confirm password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              className="w-full h-14 px-4 bg-white border border-neutral-200 rounded-lg text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:ring-0 transition-all duration-200 text-base pr-12"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full h-14 bg-neutral-900 text-white font-medium rounded-lg hover:bg-black disabled:bg-neutral-700 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-neutral-900/10 mt-2 text-base"
+        >
+          {loading ? "Creating account..." : "Create account →"}
+        </button>
       </form>
+      </div>
     </AuthLayout>
-  );
+  )
 }

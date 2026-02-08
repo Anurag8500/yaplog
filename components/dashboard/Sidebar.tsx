@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { signOut } from "next-auth/react";
 import {
     Home,
     Mic,
@@ -37,6 +38,12 @@ interface SidebarProps {
 
 export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
     const pathname = usePathname();
+
+    const handleLogout = () => {
+        signOut({
+            callbackUrl: "/login",
+        });
+    };
 
     return (
         <aside
@@ -163,7 +170,9 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                                         </p>
                                     </motion.div>
                                 </div>
-                                <LogOut className="w-4 h-4 text-neutral-600 hover:text-red-400 transition-colors shrink-0" />
+                                <button onClick={handleLogout} className="outline-none" aria-label="Log out">
+                                    <LogOut className="w-4 h-4 text-neutral-600 hover:text-red-400 transition-colors shrink-0" />
+                                </button>
                             </>
                         )}
                     </div>

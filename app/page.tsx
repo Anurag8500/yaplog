@@ -1,13 +1,15 @@
 "use client";
 
+import Link from "next/link";
+
 import { useState, useEffect, useRef } from "react";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
-import { 
-  Brain, 
-  Mic, 
-  Sparkles, 
-  History, 
-  Lightbulb, 
+import {
+  Brain,
+  Mic,
+  Sparkles,
+  History,
+  Lightbulb,
   ArrowRight,
   Menu,
   X
@@ -29,11 +31,10 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b ${
-        isScrolled
-          ? "bg-neutral-950/80 backdrop-blur-md border-white/5 py-4"
-          : "bg-transparent border-transparent py-6"
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b ${isScrolled
+        ? "bg-neutral-950/80 backdrop-blur-md border-white/5 py-4"
+        : "bg-transparent border-transparent py-6"
+        }`}
     >
       <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
         {/* Logo */}
@@ -55,16 +56,20 @@ const Navbar = () => {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-6">
-          <button className="text-sm text-neutral-300 hover:text-white transition-colors">
-            Sign In
-          </button>
-          <button className="px-5 py-2.5 rounded-full bg-white text-black text-sm font-medium hover:bg-neutral-200 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-            Get Started
-          </button>
+          <Link href="/login">
+            <button className="text-sm text-neutral-300 hover:text-white transition-colors">
+              Sign In
+            </button>
+          </Link>
+          <Link href="/signup">
+            <button className="px-5 py-2.5 rounded-full bg-white text-black text-sm font-medium hover:bg-neutral-200 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+              Get Started
+            </button>
+          </Link>
         </div>
 
         {/* Mobile Toggle */}
-        <button 
+        <button
           className="md:hidden text-neutral-300"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
@@ -74,7 +79,7 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="absolute top-full left-0 right-0 bg-neutral-950 border-b border-white/10 p-6 md:hidden flex flex-col gap-4"
@@ -82,15 +87,20 @@ const Navbar = () => {
           <a href="#features" className="text-neutral-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>Features</a>
           <a href="#how-it-works" className="text-neutral-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>How it Works</a>
           <div className="h-px bg-white/10 my-2" />
-          <button className="text-left text-neutral-300 hover:text-white">Sign In</button>
-          <button className="px-5 py-2.5 rounded-full bg-white text-black text-sm font-medium text-center">
-            Get Started
-          </button>
+          <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+            <button className="text-left text-neutral-300 hover:text-white">Sign In</button>
+          </Link>
+          <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
+            <button className="px-5 py-2.5 rounded-full bg-white text-black text-sm font-medium text-center w-full">
+              Get Started
+            </button>
+          </Link>
         </motion.div>
       )}
     </nav>
   );
 };
+
 
 const Hero = () => {
   return (
@@ -116,9 +126,11 @@ const Hero = () => {
         </p>
 
         <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-          <button className="px-8 py-3.5 rounded-full bg-white text-black text-base font-medium hover:bg-neutral-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95">
-            Start Yapping
-          </button>
+          <Link href="/signup">
+            <button className="px-8 py-3.5 rounded-full bg-white text-black text-base font-medium hover:bg-neutral-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95">
+              Start Yapping
+            </button>
+          </Link>
           <button className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors group">
             <span>How it works</span>
             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -206,7 +218,7 @@ const Phases = () => {
     <section id="how-it-works" className="py-40 px-6 border-t border-white/5 bg-neutral-950 overflow-hidden">
       <div className="max-w-5xl mx-auto">
         {/* Intro */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -237,13 +249,12 @@ const Phases = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ margin: "-20% 0px -20% 0px", once: false }}
                 transition={{ duration: 0.7, ease: "easeOut" }}
-                className={`relative flex items-center gap-8 md:gap-16 mb-32 last:mb-0 ${
-                  isEven ? "md:flex-row" : "md:flex-row-reverse"
-                }`}
+                className={`relative flex items-center gap-8 md:gap-16 mb-32 last:mb-0 ${isEven ? "md:flex-row" : "md:flex-row-reverse"
+                  }`}
               >
                 {/* Content Side */}
                 <div className={`flex-1 pl-20 md:pl-0 ${isEven ? "md:text-right" : "md:text-left"}`}>
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0.5 }}
                     whileInView={{ opacity: 1 }}
                     viewport={{ margin: "-20% 0px -20% 0px" }}
@@ -363,8 +374,8 @@ const Features = () => {
               {/* Micro-capabilities */}
               <div className="flex flex-wrap gap-x-8 gap-y-3">
                 {feature.caps.map((cap, i) => (
-                  <span 
-                    key={i} 
+                  <span
+                    key={i}
                     className="text-sm font-medium text-neutral-600 uppercase tracking-wide group-hover:text-neutral-400 transition-colors duration-500 delay-[50ms]"
                   >
                     {cap}
@@ -410,7 +421,7 @@ const Footer = () => {
             YAPLOG
           </span>
         </div>
-        
+
         <div className="flex gap-8 text-sm text-neutral-500">
           <a href="#features" className="hover:text-white transition-colors">Features</a>
           <a href="#how-it-works" className="hover:text-white transition-colors">How it Works</a>
@@ -435,7 +446,7 @@ export default function Home() {
       <Phases />
       <Features />
       <Companion />
-      
+
       {/* Final CTA */}
       <section className="py-32 px-6 text-center">
         <motion.div
@@ -454,12 +465,16 @@ export default function Home() {
             Start remembering your life.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button className="px-8 py-4 rounded-full bg-white text-black text-lg font-medium hover:bg-neutral-200 transition-all shadow-[0_0_25px_rgba(255,255,255,0.1)] w-full sm:w-auto">
-              Get Started
-            </button>
-            <button className="px-8 py-4 rounded-full text-neutral-400 hover:text-white transition-colors text-lg w-full sm:w-auto">
-              Sign In
-            </button>
+            <Link href="/signup" className="w-full sm:w-auto">
+              <button className="px-8 py-4 rounded-full bg-white text-black text-lg font-medium hover:bg-neutral-200 transition-all shadow-[0_0_25px_rgba(255,255,255,0.1)] w-full">
+                Get Started
+              </button>
+            </Link>
+            <Link href="/login" className="w-full sm:w-auto">
+              <button className="px-8 py-4 rounded-full text-neutral-400 hover:text-white transition-colors text-lg w-full">
+                Sign In
+              </button>
+            </Link>
           </div>
         </motion.div>
       </section>
