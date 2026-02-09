@@ -25,6 +25,14 @@ export async function POST(request: Request) {
       )
     }
 
+    if (user.authProvider !== "credentials") {
+      // Google OAuth account — return specific error as requested
+      return NextResponse.json(
+        { error: "This account was created using Google. Please sign in with Google." },
+        { status: 400 }
+      )
+    }
+
     if (user) {
       const resetPasswordToken = crypto.randomBytes(32).toString("hex")
       const resetPasswordTokenExpires = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes

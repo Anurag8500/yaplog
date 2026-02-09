@@ -28,6 +28,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 })
     }
 
+    if (user.authProvider !== "credentials") {
+      return NextResponse.json({ error: "Invalid request for this account type" }, { status: 403 })
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10)
 
     await db.collection("users").updateOne(

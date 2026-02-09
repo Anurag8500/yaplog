@@ -1,74 +1,44 @@
-import NextAuth from "next-auth"
+import NextAuth, { AuthError } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+import Google from "next-auth/providers/google"
 import clientPromise from "@/lib/mongodb"
 import bcrypt from "bcryptjs"
-import crypto from "crypto"
-import { sendVerificationEmail } from "@/lib/email"
+
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+  throw new Error("Missing Google OAuth environment variables")
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
     Credentials({
       name: "Credentials",
       credentials: {
-        name: { label: "Name", type: "text" },
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        isSignup: { label: "isSignup", type: "text" },
       },
       authorize: async (credentials) => {
-        const client = await clientPromise
-        const db = client.db()
-        const isSignup = credentials?.isSignup === "true"
-
         if (!credentials?.email || !credentials?.password) return null
 
-        // SIGN UP
-        if (isSignup) {
-          if (!credentials.name || (credentials.password as string).length < 8) return null
+        const client = await clientPromise
+        const db = client.db()
 
-          // Check if user already exists
-          const existingUser = await db
-            .collection("users")
-            .findOne({ email: credentials.email })
-
-          if (existingUser) {
-             throw new Error("UserExists")
-          }
-
-          const hashedPassword = await bcrypt.hash(credentials.password as string, 12)
-          const verificationToken = crypto.randomBytes(32).toString("hex")
-          const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-
-          await db.collection("users").insertOne({
-            name: credentials.name,
-            email: credentials.email,
-            password: hashedPassword,
-            emailVerified: false,
-            verificationToken,
-            verificationTokenExpires,
-            createdAt: new Date(),
-          })
-
-          try {
-            await sendVerificationEmail({
-              email: credentials.email as string,
-              name: credentials.name as string,
-              token: verificationToken,
-            })
-          } catch (error) {
-            console.error("Failed to send verification email:", error)
-          }
-
-          // Return null to prevent session creation
-          return null
-        }
-
-        // LOGIN
+        // LOGIN ONLY
         const user = await db
           .collection("users")
           .findOne({ email: credentials.email })
 
         if (!user || !user.password) return null
+
+        // Ensure user is using credentials provider
+        if (user.authProvider && user.authProvider !== "credentials") {
+          // If the user signed up with Google but tries to log in with password
+          // In a real app we might want to support linking, but for now strict separation
+          throw new AuthError("ACCOUNT_PROVIDER_MISMATCH")
+        }
 
         const isValid = await bcrypt.compare(
           credentials.password as string,
@@ -79,7 +49,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // Check verification status
         if (user.emailVerified === false) {
-          throw new Error("EmailNotVerified")
+          throw new AuthError("EMAIL_NOT_VERIFIED")
         }
 
         return {
@@ -95,20 +65,71 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
   },
 
-  pages: {
-    signIn: "/login",
-  },
-
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) token.sub = user.id
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        try {
+          const client = await clientPromise
+          const db = client.db()
+          const { email, name } = user
+
+          if (!email) return false // Should not happen with Google
+
+          const existingUser = await db.collection("users").findOne({ email })
+
+          if (existingUser) {
+            // User exists, update with Google info if not present
+            await db.collection("users").updateOne(
+              { email },
+              {
+                $set: {
+                  googleId: account.providerAccountId,
+                  authProvider: "google",
+                  // Ensure email is verified since Google verified it
+                  emailVerified: true,
+                },
+              }
+            )
+            // Explicitly attach user id from DB
+            user.id = existingUser._id.toString()
+            return true
+          } else {
+            // Create new user
+            const newUser = await db.collection("users").insertOne({
+              name: name || "User",
+              email,
+              googleId: account.providerAccountId,
+              authProvider: "google",
+              emailVerified: true,
+              createdAt: new Date(),
+            })
+            // Explicitly attach user id from DB
+            user.id = newUser.insertedId.toString()
+            return true
+          }
+        } catch (error) {
+          console.error("Google sign in error:", error)
+          return false
+        }
+      }
+      return true
+    },
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.id = user.id
+      }
       return token
     },
     async session({ session, token }) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub
+      if (session.user && token.id) {
+        session.user.id = token.id as string
       }
       return session
     },
   },
+
+  pages: {
+    signIn: "/login",
+  },
 })
+
