@@ -2,6 +2,8 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import clientPromise from "@/lib/mongodb"
 import bcrypt from "bcryptjs"
+import crypto from "crypto"
+import { sendVerificationEmail } from "@/lib/email"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -24,26 +26,41 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (isSignup) {
           if (!credentials.name || (credentials.password as string).length < 8) return null
 
+          // Check if user already exists
           const existingUser = await db
             .collection("users")
             .findOne({ email: credentials.email })
 
-          if (existingUser) return null
+          if (existingUser) {
+             throw new Error("UserExists")
+          }
 
           const hashedPassword = await bcrypt.hash(credentials.password as string, 12)
+          const verificationToken = crypto.randomBytes(32).toString("hex")
+          const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
-          const result = await db.collection("users").insertOne({
+          await db.collection("users").insertOne({
             name: credentials.name,
             email: credentials.email,
             password: hashedPassword,
+            emailVerified: false,
+            verificationToken,
+            verificationTokenExpires,
             createdAt: new Date(),
           })
 
-          return {
-            id: result.insertedId.toString(),
-            name: credentials.name as string,
-            email: credentials.email as string,
+          try {
+            await sendVerificationEmail({
+              email: credentials.email as string,
+              name: credentials.name as string,
+              token: verificationToken,
+            })
+          } catch (error) {
+            console.error("Failed to send verification email:", error)
           }
+
+          // Return null to prevent session creation
+          return null
         }
 
         // LOGIN
@@ -59,6 +76,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         )
 
         if (!isValid) return null
+
+        // Check verification status
+        if (user.emailVerified === false) {
+          throw new Error("EmailNotVerified")
+        }
 
         return {
           id: user._id.toString(),

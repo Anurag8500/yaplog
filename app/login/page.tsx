@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import AuthLayout from "../components/AuthLayout"
@@ -14,10 +14,40 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
+  const [resendStatus, setResendStatus] = useState<"idle" | "loading" | "success">("idle")
+  const [countdown, setCountdown] = useState(0)
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [countdown])
+
+  const handleResendVerification = async () => {
+    if (countdown > 0) return
+
+    setResendStatus("loading")
+    try {
+      await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      setResendStatus("success")
+      setCountdown(30)
+    } catch (error) {
+      // Even if it fails, show success to prevent enumeration/confusion
+      setResendStatus("success")
+      setCountdown(30)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
+    setResendStatus("idle") // Reset resend status on new attempt
 
     if (!email || !password) {
       setError("Please fill in all fields")
@@ -33,7 +63,11 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        setError("Invalid email or password")
+        if (result.error.includes("EmailNotVerified") || result.code === "email_not_verified") {
+          setError("Please verify your email before signing in.")
+        } else {
+          setError("Invalid email or password")
+        }
         setLoading(false)
       } else {
         router.push("/dashboard/home")
@@ -91,8 +125,29 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="p-3 bg-red-50 text-red-500 text-sm rounded-lg border border-red-100">
-              {error}
+            <div className="p-3 bg-red-50 text-red-500 text-sm rounded-lg border border-red-100 flex flex-col gap-2">
+              <p>{error}</p>
+              {error === "Please verify your email before signing in." && (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendStatus === "loading" || countdown > 0}
+                  className="text-sm font-medium text-neutral-900 underline hover:text-neutral-700 self-start disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resendStatus === "loading"
+                    ? "Sending..."
+                    : countdown > 0
+                    ? `Resend available in ${countdown}s`
+                    : resendStatus === "success"
+                    ? "Email sent!"
+                    : "Resend verification email"}
+                </button>
+              )}
+              {resendStatus === "success" && (
+                <p className="text-green-600 text-xs">
+                  Verification email sent. Please check your inbox.
+                </p>
+              )}
             </div>
           )}
 
@@ -123,6 +178,14 @@ export default function LoginPage() {
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
+            </div>
+            <div className="flex justify-end"> 
+              <a 
+                href="/forgot-password" 
+                className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors" 
+              > 
+                Forgot password? 
+              </a> 
             </div>
           </div>
 

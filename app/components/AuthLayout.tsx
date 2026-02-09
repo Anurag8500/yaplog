@@ -25,35 +25,35 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row">
       {/* LEFT SIDE (BLACK — BRAND / EMOTION) */}
-      <div className="w-full md:w-1/2 bg-[#050505] text-white p-10 md:p-20 flex flex-col justify-center relative overflow-hidden">
+      <div className="w-full md:w-1/2 bg-[#050505] text-white p-8 md:p-20 flex flex-col justify-center relative overflow-hidden min-h-[300px] md:min-h-screen">
         {/* Subtle texture/gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/20 to-black pointer-events-none" />
         
         <div className="relative z-10 w-full max-w-xl mx-auto md:mx-0">
-          <div className="mb-16 md:mb-24">
+          <div className="mb-8 md:mb-24">
              <Link href="/" className="text-sm font-bold tracking-[0.2em] text-white/80 uppercase hover:text-white transition-colors">
               Yaplog
             </Link>
           </div>
           
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight mb-8 text-white">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight mb-4 md:mb-8 text-white">
             {leftHeadline}
           </h1>
           
-          <p className="text-lg md:text-xl text-neutral-400 font-light leading-relaxed max-w-md">
+          <p className="text-base md:text-xl text-neutral-400 font-light leading-relaxed max-w-md">
             {leftSubtext}
           </p>
         </div>
       </div>
 
       {/* RIGHT SIDE (WHITE — ACTION / FORM) */}
-      <div className="w-full md:w-1/2 bg-white text-neutral-900 p-8 md:p-16 lg:p-24 flex flex-col justify-center">
+      <div className="w-full md:w-1/2 bg-white text-neutral-900 px-6 py-10 md:p-16 lg:p-24 flex flex-col justify-center">
         <div className="w-full max-w-md mx-auto">
-          <div className="mb-10">
-            <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-3">
+          <div className="mb-8 md:mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-neutral-900 mb-2 md:mb-3">
               {rightTitle}
             </h2>
-            <p className="text-neutral-500 text-lg">
+            <p className="text-neutral-500 text-base md:text-lg">
               {rightSubtitle}
             </p>
           </div>
