@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { ChevronDown, ChevronUp, Lock } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ChevronDown, ChevronUp, Lock, Loader2 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -11,6 +11,14 @@ function cn(...inputs: ClassValue[]) {
 }
 
 // --- Types ---
+type Memory = {
+    _id: string;
+    userId: string;
+    content: string;
+    date: string;
+    createdAt: string;
+};
+
 type DayData = {
     id: string;
     date: string;
@@ -21,86 +29,6 @@ type DayData = {
     structuredUnderstanding: string[];
     summary: string;
 };
-
-// --- Mock Data ---
-const MEMORY_DATA: DayData[] = [
-    {
-        id: "today",
-        date: "Today, 8 Feb 2026",
-        isToday: true,
-        essence:
-            "Focused technical work with brief distraction. Clear intent to revise tomorrow.",
-        highlights: ["DSA Practice", "Focus Dip", "Revision Planned"],
-        rawInputs: [
-            "Solved 30 DSA questions",
-            "Got distracted after lunch",
-            "Need to revise tomorrow",
-            "Feeling a bit overwhelmed by the system design stuff",
-        ],
-        structuredUnderstanding: [
-            "Completed a significant block of DSA practice (30 questions)",
-            "Experienced reduced focus during the afternoon session",
-            "Identified a requirement for revision the following day",
-            "Expressed feeling overwhelmed regarding system design concepts",
-        ],
-        summary:
-            "A productive day focused on technical practice, despite some mid-day distraction. There is a clear intention to consolidate learning tomorrow.",
-    },
-    {
-        id: "day-1",
-        date: "Monday, 7 Feb 2026",
-        essence: "New reading habit started, fitness routine reconsidered.",
-        highlights: ["Reading", "Fitness Goal", "Coffee Taste"],
-        rawInputs: [
-            "Started reading the new sci-fi book",
-            "Thinking about changing my workout routine",
-            "The coffee at the new place was too bitter",
-        ],
-        structuredUnderstanding: [
-            "Began reading a new science fiction novel",
-            "Considering modifications to current fitness regimen",
-            "Noted dissatisfaction with coffee quality at a new location",
-        ],
-        summary:
-            "A day marked by new beginnings in leisure reading and contemplation of routine adjustments. Sensory preferences regarding coffee were also noted.",
-    },
-    {
-        id: "day-2",
-        date: "Sunday, 6 Feb 2026",
-        essence: "Deep work on landing page, balanced with life admin.",
-        highlights: ["Coding Mode", "Family", "Errands"],
-        rawInputs: [
-            "Spent all day coding the landing page",
-            "Forgot to call mom",
-            "Need to buy groceries",
-        ],
-        structuredUnderstanding: [
-            "Dedicated entire day to landing page development",
-            "Acknowledged missed communication with mother",
-            "Identified need for grocery shopping",
-        ],
-        summary:
-            "High productivity in coding tasks, with a reminder to attend to personal relationships and household necessities.",
-    },
-    {
-        id: "day-3",
-        date: "Saturday, 5 Feb 2026",
-        essence: "Physical activity boosting mood, followed by strategic planning.",
-        highlights: ["Running", "High Energy", "Quarterly Review"],
-        rawInputs: [
-            "Went for a long run in the morning",
-            "Felt great afterwards",
-            "Reviewing Q1 goals",
-        ],
-        structuredUnderstanding: [
-            "Completed a long-distance morning run",
-            "Reported positive post-exercise physical and mental state",
-            "Engaged in review of first-quarter objectives",
-        ],
-        summary:
-            "A physically active start to the weekend contributing to a positive mood, followed by strategic planning and goal review.",
-    },
-];
 
 // --- Components ---
 
@@ -260,8 +188,99 @@ const MemoryCard = ({ data }: { data: DayData }) => {
 };
 
 export default function MemoryPage() {
-    const todayData = MEMORY_DATA.find((d) => d.isToday);
-    const previousDays = MEMORY_DATA.filter((d) => !d.isToday);
+    const [days, setDays] = useState<DayData[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchMemories() {
+            try {
+                const res = await fetch("/api/memory");
+                if (res.ok) {
+                    const { memories } = await res.json();
+                    const grouped = groupMemories(memories);
+                    setDays(grouped);
+                }
+            } catch (e) {
+                console.error("Failed to fetch memories:", e);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchMemories();
+    }, []);
+
+    function groupMemories(memories: Memory[]): DayData[] {
+        if (!memories || memories.length === 0) return [];
+
+        const groups: Record<string, Memory[]> = {};
+        
+        // Group by date
+        memories.forEach(m => {
+            if (!groups[m.date]) {
+                groups[m.date] = [];
+            }
+            groups[m.date].push(m);
+        });
+
+        // Convert to DayData
+        const dayDataList: DayData[] = Object.keys(groups).map(dateStr => {
+            // Sort memories by createdAt descending (newest first)
+            // This ensures essence is always the most recent memory
+            const sortedMemories = groups[dateStr].sort((a, b) => 
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+
+            const contents = sortedMemories.map(m => m.content);
+            
+            // Format date for display
+            // dateStr is YYYY-MM-DD
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, day); // Local date
+            
+            const today = new Date();
+            const isToday = 
+                dateObj.getDate() === today.getDate() &&
+                dateObj.getMonth() === today.getMonth() &&
+                dateObj.getFullYear() === today.getFullYear();
+
+            const formattedDate = dateObj.toLocaleDateString("en-GB", { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'short', 
+                year: 'numeric' 
+            }); // e.g. "Monday, 9 Feb 2026"
+
+            // Special format for Today
+            const displayDate = isToday 
+                ? `Today, ${dateObj.getDate()} ${dateObj.toLocaleDateString('en-GB', { month: 'short' })} ${dateObj.getFullYear()}`
+                : formattedDate;
+
+            return {
+                id: dateStr,
+                date: displayDate,
+                isToday,
+                essence: contents[0] || "No content", // Most recent entry is the essence
+                highlights: [],
+                rawInputs: contents,
+                structuredUnderstanding: [],
+                summary: contents.join(" "),
+            };
+        });
+
+        // Sort by date descending
+        return dayDataList.sort((a, b) => b.id.localeCompare(a.id));
+    }
+
+    const todayData = days.find((d) => d.isToday);
+    const previousDays = days.filter((d) => !d.isToday);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-zinc-200 px-6 py-16 md:px-12 lg:px-24 max-w-4xl mx-auto font-sans selection:bg-yellow-500/20 selection:text-yellow-200">
@@ -278,32 +297,44 @@ export default function MemoryPage() {
                 <div className="w-12 h-1 bg-yellow-500/20 rounded-full mx-auto mt-6" />
             </header>
 
-            {/* Section 1: Today */}
-            <section className="mb-20">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">
-                        Today
-                    </h2>
-                    <span className="text-xs text-yellow-500/60 animate-pulse">
-                        Updates automatically as you talk
-                    </span>
+            {days.length === 0 ? (
+                <div className="text-center py-20">
+                    <p className="text-zinc-500 text-lg">No memories found.</p>
                 </div>
+            ) : (
+                <>
+                    {/* Section 1: Today */}
+                    {todayData && (
+                        <section className="mb-20">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">
+                                    Today
+                                </h2>
+                                <span className="text-xs text-yellow-500/60 animate-pulse">
+                                    Updates automatically as you talk
+                                </span>
+                            </div>
 
-                {todayData && <MemoryCard data={todayData} />}
-            </section>
+                            <MemoryCard data={todayData} />
+                        </section>
+                    )}
 
-            {/* Section 2: Previous Days */}
-            <section className="mb-24">
-                <h2 className="text-sm font-medium text-zinc-500 uppercase tracking-wider mb-6">
-                    Previous Days
-                </h2>
+                    {/* Section 2: Previous Days */}
+                    {previousDays.length > 0 && (
+                        <section className="mb-24">
+                            <h2 className="text-sm font-medium text-zinc-500 uppercase tracking-wider mb-6">
+                                Previous Days
+                            </h2>
 
-                <div className="space-y-4">
-                    {previousDays.map((day) => (
-                        <MemoryCard key={day.id} data={day} />
-                    ))}
-                </div>
-            </section>
+                            <div className="space-y-4">
+                                {previousDays.map((day) => (
+                                    <MemoryCard key={day.id} data={day} />
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                </>
+            )}
         </div>
     );
 }

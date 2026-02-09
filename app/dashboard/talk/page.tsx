@@ -10,6 +10,7 @@ type TalkState = "idle" | "listening" | "processing" | "preview" | "edit";
 export default function TalkPage() {
     const [state, setState] = useState<TalkState>("idle");
     const [inputText, setInputText] = useState("");
+    const [error, setError] = useState<string | null>(null);
     const [bullets, setBullets] = useState([
         "Completed 3 DSA lectures today",
         "Noticed reduced focus during the second session",
@@ -54,17 +55,39 @@ export default function TalkPage() {
         }
     };
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         if (!inputText.trim()) return;
+        
         setState("processing");
-        setTimeout(() => {
-            setState("preview");
-        }, 1500);
+        setError(null);
+
+        try {
+            const res = await fetch("/api/memory", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content: inputText }),
+            });
+
+            if (!res.ok) {
+                if (res.status === 401) {
+                    throw new Error("Please sign in again to continue");
+                }
+                throw new Error("Failed to save memory");
+            }
+
+            // Success
+            handleReset();
+        } catch (err: any) {
+            console.error("Submission error:", err);
+            setError(err.message || "Something went wrong");
+            setState("idle");
+        }
     };
 
     const handleReset = () => {
         setState("idle");
         setInputText("");
+        setError(null);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
@@ -108,10 +131,21 @@ export default function TalkPage() {
                         ref={inputRef}
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleContinue();
+                            }
+                        }}
                         placeholder="What's on your mind?"
                         className="w-full bg-transparent text-xl md:text-2xl text-white placeholder:text-neutral-600 font-light focus:outline-none resize-none min-h-[140px] leading-relaxed"
                         disabled={state !== "idle" && state !== "listening"}
                     />
+                    {error && (
+                        <p className="mt-2 text-red-500 text-sm font-medium animate-pulse">
+                            {error}
+                        </p>
+                    )}
                 </div>
 
                 {/* Integrated Action Bar */}
