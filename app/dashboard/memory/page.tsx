@@ -17,6 +17,10 @@ type Memory = {
     content: string;
     date: string;
     createdAt: string;
+    essence?: string | null;
+    structuredUnderstanding?: string[];
+    summary?: string | null;
+    processed?: boolean;
 };
 
 type DayData = {
@@ -28,6 +32,7 @@ type DayData = {
     rawInputs: string[];
     structuredUnderstanding: string[];
     summary: string;
+    processed: boolean;
 };
 
 // --- Components ---
@@ -84,10 +89,17 @@ const MemoryCard = ({ data }: { data: DayData }) => {
                                 {data.date}
                             </h3>
                             {data.isToday && (
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-                                </span>
+                                <>
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                                    </span>
+                                    {!data.processed && (
+                                        <span className="ml-2 text-xs text-zinc-500 animate-pulse font-normal opacity-70">
+                                            Processing
+                                        </span>
+                                    )}
+                                </>
                             )}
                         </div>
 
@@ -142,32 +154,36 @@ const MemoryCard = ({ data }: { data: DayData }) => {
                             </DetailSection>
 
                             {/* B. What YAPLOG understood */}
-                            <DetailSection title="What YAPLOG understood">
-                                <ul className="space-y-3">
-                                    {data.structuredUnderstanding.map((item, idx) => (
-                                        <li
-                                            key={idx}
-                                            className="flex gap-3 text-zinc-300 text-sm leading-relaxed"
-                                        >
-                                            <span className="text-yellow-500/50 mt-1.5 text-[8px]">
-                                                ❖
-                                            </span>
-                                            <span>{item}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </DetailSection>
+                            {data.structuredUnderstanding && data.structuredUnderstanding.length > 0 && (
+                                <DetailSection title="What YAPLOG understood">
+                                    <ul className="space-y-3">
+                                        {data.structuredUnderstanding.map((item, idx) => (
+                                            <li
+                                                key={idx}
+                                                className="flex gap-3 text-zinc-300 text-sm leading-relaxed"
+                                            >
+                                                <span className="text-yellow-500/50 mt-1.5 text-[8px]">
+                                                    ❖
+                                                </span>
+                                                <span>{item}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </DetailSection>
+                            )}
                         </div>
 
                         {/* C. Daily Summary */}
-                        <div className="mt-8 pt-8 border-t border-zinc-800/30">
-                            <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">
-                                Daily summary
-                            </h4>
-                            <p className="text-zinc-400 font-light italic text-sm leading-relaxed max-w-3xl">
-                                {data.summary}
-                            </p>
-                        </div>
+                        {data.summary && (
+                            <div className="mt-8 pt-8 border-t border-zinc-800/30">
+                                <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">
+                                    Daily summary
+                                </h4>
+                                <p className="text-zinc-400 font-light italic text-sm leading-relaxed max-w-3xl">
+                                    {data.summary}
+                                </p>
+                            </div>
+                        )}
 
                         {/* 3. Trust Footer (Only visible when expanded, mainly for Today) */}
                         {data.isToday && (
@@ -192,21 +208,39 @@ export default function MemoryPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+        let isMounted = true;
+
         async function fetchMemories() {
             try {
                 const res = await fetch("/api/memory");
-                if (res.ok) {
+                if (res.ok && isMounted) {
                     const { memories } = await res.json();
                     const grouped = groupMemories(memories);
                     setDays(grouped);
+
+                    // Polling Logic:
+                    // If Today exists and is NOT processed, poll again in 5s.
+                    // This handles the "first input of the day" and "refining understanding" cases automatically.
+                    const today = grouped.find(d => d.isToday);
+                    if (today && !today.processed) {
+                        // console.log("Today is processing... polling in 5s"); // Optional log
+                        timeoutId = setTimeout(fetchMemories, 5000);
+                    }
                 }
             } catch (e) {
                 console.error("Failed to fetch memories:", e);
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         }
+
         fetchMemories();
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timeoutId);
+        };
     }, []);
 
     function groupMemories(memories: Memory[]): DayData[] {
@@ -231,6 +265,8 @@ export default function MemoryPage() {
             );
 
             const contents = sortedMemories.map(m => m.content);
+            const latestMemory = sortedMemories[0]; // Source of truth for AI fields
+            const processed = latestMemory.processed === true;
             
             // Format date for display
             // dateStr is YYYY-MM-DD
@@ -255,15 +291,44 @@ export default function MemoryPage() {
                 ? `Today, ${dateObj.getDate()} ${dateObj.toLocaleDateString('en-GB', { month: 'short' })} ${dateObj.getFullYear()}`
                 : formattedDate;
 
+            // 1. Essence Logic
+            let essence = "";
+            if (isToday && !processed) {
+                essence = "Understanding your day…";
+            } else if (processed) {
+                essence = latestMemory.essence || "";
+            } else {
+                // Previous days unprocessed: show safe placeholder
+                essence = "Memory recorded."; 
+            }
+
+            // 2. Structured Understanding Logic
+            // Only show if processed and has data
+            const structuredUnderstanding = (processed && latestMemory.structuredUnderstanding && latestMemory.structuredUnderstanding.length > 0)
+                ? latestMemory.structuredUnderstanding
+                : [];
+
+            // 3. Summary Logic
+            let summary = "";
+            if (isToday && !processed) {
+                summary = "Your day is being gently summarized.";
+            } else if (processed) {
+                summary = latestMemory.summary || "";
+            } else {
+                // Previous days unprocessed: show nothing
+                summary = "";
+            }
+
             return {
                 id: dateStr,
                 date: displayDate,
                 isToday,
-                essence: contents[0] || "No content", // Most recent entry is the essence
+                essence,
                 highlights: [],
                 rawInputs: contents,
-                structuredUnderstanding: [],
-                summary: contents.join(" "),
+                structuredUnderstanding,
+                summary,
+                processed,
             };
         });
 

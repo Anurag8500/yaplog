@@ -20,8 +20,12 @@ export async function POST(request: Request) {
     const client = await clientPromise
     const db = client.db()
 
-    const today = new Date()
-    const dateStr = today.toISOString().split("T")[0] // YYYY-MM-DD
+    const now = new Date()
+    const dateStr = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-")
 
     const memory = {
       userId: session.user.id,
@@ -35,6 +39,16 @@ export async function POST(request: Request) {
     }
 
     await db.collection("memories").insertOne(memory)
+
+    // Trigger AI processing in background (fire and forget)
+    // Only for today's memories (which this is, since we just created it with 'now')
+    const protocol = request.url.startsWith("https") ? "https" : "http"
+    const host = request.headers.get("host") || "localhost:3000"
+    const processUrl = `${protocol}://${host}/api/memory/process`
+
+    fetch(processUrl, {
+      method: "POST",
+    }).catch((err) => console.error("Background processing trigger failed:", err))
 
     return NextResponse.json({ success: true, memory })
   } catch (error) {
