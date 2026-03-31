@@ -8,6 +8,8 @@ import { motion } from "framer-motion";
 export function DashboardShell({ children }: { children: React.ReactNode }) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
+    const paddingLeft = isCollapsed ? 120 : 288;
+
     return (
         <div className="flex min-h-screen bg-black text-neutral-200 selection:bg-amber-500/30 selection:text-amber-100 overflow-hidden">
 
@@ -16,15 +18,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {/* Main Content Area - Adjusts padding based on sidebar state */}
             <motion.main
                 className={cn(
-                    "flex-1 w-full min-h-screen overflow-y-auto custom-scrollbar py-4 md:py-8 pr-4 md:pr-8 transition-all duration-300 ease-in-out",
-                    isCollapsed ? "pl-28" : "pl-72" // 24 (sidebar) + 4 (gap) = 28 ?? No. Sidebar width collapsed is w-20 (5rem = 80px). left-4 (1rem). Total ~6rem+ ?? 
-                    // Let's verify padding. 
-                    // Floating Sidebar: fixed left-4.
-                    // Expanded: w-64 (16rem = 256px). Padding should be ~256 + 16 + gap. pl-72 (18rem = 288px) worked well.
-                    // Collapsed: w-20 (5rem = 80px). Padding should be ~80 + 16 + gap. 5rem + 1rem + 2rem = 8rem = pl-32.
+                    "flex-1 w-full min-h-screen overflow-y-auto custom-scrollbar py-4 md:py-8 pr-4 md:pr-8 transition-all duration-300 ease-in-out"
                 )}
-                animate={{ paddingLeft: isCollapsed ? "120px" : "288px" }} // Explicit pixel/rem values for smoother motion if possible, or classes.
+                animate={{ paddingLeft: `${paddingLeft}px` }} 
                 transition={{ duration: 0.3, ease: "easeInOut" }}
+                style={{ "--sidebar-offset": `${paddingLeft}px` } as React.CSSProperties}
             >
                 <div className="max-w-6xl mx-auto pt-8 pb-20">
                     {children}
