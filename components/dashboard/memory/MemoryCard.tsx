@@ -19,6 +19,9 @@ export type DayData = {
     timeline: TimelineEntry[];
     structuredUnderstanding: string[];
     summary: string;
+    memoryType?: string | null;
+    domains?: string[] | null;
+    actions?: string[] | null;
     processed: boolean;
 };
 
@@ -159,6 +162,61 @@ export const ExpandedMemoryCard = ({ data, onClose }: { data: DayData; onClose: 
                                 </div>
                             </motion.div>
                         )}
+
+                        {/* Memory Intelligence */}
+                        {(data.memoryType || (data.domains && data.domains.length > 0) || (data.actions && data.actions.length > 0)) && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
+                                className="space-y-8"
+                            >
+                                <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-neutral-400">
+                                    Memory Intelligence
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 rounded-[2rem] bg-zinc-900/20 border border-white/5 backdrop-blur-sm">
+                                    {/* Type & Domains */}
+                                    <div className="space-y-6">
+                                        {data.memoryType && data.memoryType !== "mixed" && (
+                                            <div className="space-y-3">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Memory Type</span>
+                                                <div>
+                                                    <span className="bg-yellow-500/10 text-yellow-400 px-3 py-1 rounded-full text-xs font-medium border border-yellow-500/10 inline-block">
+                                                        {data.memoryType}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {data.domains && data.domains.length > 0 && (
+                                            <div className="space-y-3">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Domains</span>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {data.domains.map((domain, idx) => (
+                                                        <span key={idx} className="bg-neutral-800 text-neutral-300 px-2 py-1 rounded-md text-xs font-medium border border-white/5">
+                                                            {domain}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Actions */}
+                                    {data.actions && data.actions.length > 0 && (
+                                        <div className="space-y-3">
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Actions</span>
+                                            <ul className="space-y-2">
+                                                {data.actions.map((action, idx) => (
+                                                    <li key={idx} className="flex items-center gap-2 text-zinc-300 text-sm font-light">
+                                                        <span className="w-1 h-1 rounded-full bg-yellow-500/50" />
+                                                        {action}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
 
                     {/* Right Column: Timeline */}
@@ -170,7 +228,7 @@ export const ExpandedMemoryCard = ({ data, onClose }: { data: DayData; onClose: 
                                 className="space-y-10"
                             >
                                 <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-neutral-400 flex items-center justify-between border-b border-white/5 pb-4">
-                                    <span>Chronology</span>
+                                    <span>Timeline</span>
                                     <span className="text-[10px] bg-yellow-500/10 text-yellow-500 px-3 py-1 rounded-full uppercase tracking-wider">{data.entryCount} entries</span>
                                 </h4>
                                 

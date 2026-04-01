@@ -10,22 +10,64 @@ interface AIResponse {
   essence: string
   structuredUnderstanding: string[]
   summary: string
+  memoryType: string
+  domains: string[]
+  actions: string[]
 }
 
 async function generateWithOllama(content: string): Promise<AIResponse | null> {
   const prompt = `
-You are a helpful AI assistant. Analyze the following user memory and return a structured JSON response.
-Do not output any text other than the JSON.
+You are an intelligent life memory analysis AI. 
 
-Memory content:
-"${content}"
+Analyze the following daily memories and return structured JSON. 
 
-Return strictly this JSON format:
-{
-  "essence": "A single, concise sentence capturing the core meaning",
-  "structuredUnderstanding": ["Key point 1", "Key point 2", "Key point 3"],
-  "summary": "A short paragraph summarizing the context and details"
-}
+Memory content: 
+"${content}" 
+
+Return STRICT JSON only. 
+
+Required format: 
+
+{ 
+  "essence": "One clear sentence describing the day", 
+  "structuredUnderstanding": [ 
+    "Key understanding 1", 
+    "Key understanding 2" 
+  ], 
+  "summary": "Short paragraph summary", 
+
+  "memoryType": 
+  "coding | learning | planning | idea | personal | health | mixed", 
+
+  "domains":[ 
+  "Coding", 
+  "Learning", 
+  "Project", 
+  "Planning", 
+  "Personal", 
+  "Health" 
+  ], 
+
+  "actions":[ 
+  "Push code", 
+  "Deploy project", 
+  "Study session" 
+  ] 
+} 
+
+Rules: 
+
+memoryType: 
+Pick main category. 
+
+domains: 
+Pick 1-3 relevant domains. 
+
+actions: 
+Only concrete actions performed or planned. 
+
+Do NOT invent data. 
+Return JSON only. 
 `
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 60000) // 60s timeout
@@ -68,8 +110,15 @@ Return strictly this JSON format:
       const parsed: AIResponse = JSON.parse(jsonString)
       
       // Basic validation
-      if (!parsed.essence || !Array.isArray(parsed.structuredUnderstanding) || !parsed.summary) {
-        console.warn("Ollama returned incomplete JSON structure:", parsed)
+      if (
+        !parsed.essence || 
+        !Array.isArray(parsed.structuredUnderstanding) || 
+        !parsed.summary ||
+        !parsed.memoryType || 
+        !Array.isArray(parsed.domains) || 
+        !Array.isArray(parsed.actions)
+      ) {
+        console.warn("AI returned incomplete intelligence fields:", parsed)
         return null
       }
       
@@ -223,6 +272,9 @@ export async function POST(request: Request) {
                                 essence: aiResult.essence,
                                 structuredUnderstanding: aiResult.structuredUnderstanding,
                                 summary: aiResult.summary,
+                                memoryType: aiResult.memoryType,
+                                domains: aiResult.domains,
+                                actions: aiResult.actions,
                                 processed: true,
                                 processing: false,
                                 processedAt: new Date(),
@@ -239,7 +291,12 @@ export async function POST(request: Request) {
                         {
                             $set: { 
                                 processed: true,
-                                processing: false 
+                                processing: false,
+                                memoryType: aiResult.memoryType,
+                                domains: aiResult.domains,
+                                actions: aiResult.actions,
+                                processedAt: new Date(),
+                                lastUpdatedAt: new Date()
                             }
                         }
                     )

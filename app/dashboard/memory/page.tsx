@@ -12,9 +12,15 @@ type Memory = {
     content: string;
     date: string;
     createdAt: string;
+
     essence?: string | null;
     structuredUnderstanding?: string[];
     summary?: string | null;
+
+    memoryType?: string | null;
+    domains?: string[];
+    actions?: string[];
+
     processed?: boolean;
 };
 
@@ -130,6 +136,10 @@ export default function MemoryPage() {
                 summary = "";
             }
 
+            const memoryType = latestMemory.memoryType || "mixed";
+            const domains = latestMemory.domains || [];
+            const actions = latestMemory.actions || [];
+
             // 4. Timeline Logic
             const timeline = timelineMemories.map(m => ({
                 time: new Date(m.createdAt).toLocaleTimeString('en-GB', { 
@@ -148,6 +158,9 @@ export default function MemoryPage() {
                 timeline,
                 structuredUnderstanding,
                 summary,
+                memoryType,
+                domains,
+                actions,
                 processed,
             };
         });

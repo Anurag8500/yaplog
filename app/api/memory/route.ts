@@ -35,6 +35,9 @@ export async function POST(request: Request) {
       essence: null,
       structuredUnderstanding: [],
       summary: null,
+      memoryType: null,
+      domains: [],
+      actions: [],
       processed: false,
     }
 
