@@ -82,3 +82,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await auth()
+    if (!session || !session.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const client = await clientPromise
+    const db = client.db()
+
+    const result = await db
+      .collection("memories")
+      .deleteMany({ userId: session.user.id })
+
+    return NextResponse.json({ success: true, deletedCount: result.deletedCount })
+  } catch (error) {
+    console.error("Failed to delete memories:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  }
+}
