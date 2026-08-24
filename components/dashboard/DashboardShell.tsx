@@ -5,7 +5,13 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({ 
+    children,
+    session
+}: { 
+    children: React.ReactNode;
+    session: any;
+}) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     const paddingLeft = isCollapsed ? 120 : 288;
@@ -13,7 +19,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex min-h-screen bg-black text-neutral-200 selection:bg-amber-500/30 selection:text-amber-100 overflow-hidden">
 
-            <Sidebar isCollapsed={isCollapsed} toggleCollapse={() => setIsCollapsed(!isCollapsed)} />
+            <Sidebar session={session} isCollapsed={isCollapsed} toggleCollapse={() => setIsCollapsed(!isCollapsed)} />
 
             {/* Main Content Area - Adjusts padding based on sidebar state */}
             <motion.main

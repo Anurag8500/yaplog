@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Mic, Sparkles, Brain, History, Layers } from "lucide-react";
 import { Card } from "@/components/dashboard/Card";
+import { auth } from "@/auth";
 
 function getGreeting() {
     const hour = new Date().getHours();
@@ -9,7 +10,9 @@ function getGreeting() {
     return "Good evening";
 }
 
-export default function DashboardHomePage() {
+export default async function DashboardHomePage() {
+    const session = await auth();
+    const userName = session?.user?.name || "User";
     const greeting = getGreeting();
 
     return (
@@ -18,7 +21,7 @@ export default function DashboardHomePage() {
             {/* 1. Greeting Section */}
             <section className="text-center space-y-4">
                 <h1 className="text-5xl md:text-6xl font-extralight text-white tracking-tight">
-                    {greeting}, Anurag.
+                    {greeting}, {userName}.
                 </h1>
                 <p className="text-xl text-neutral-400 font-light">
                     You can think out loud here.

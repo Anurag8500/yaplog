@@ -19,6 +19,7 @@ export default function TalkPage() {
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const analysisRef = useRef<HTMLDivElement>(null);
+    const recognitionRef = useRef<any>(null);
 
     // Auto-focus on load
     useEffect(() => {
@@ -37,27 +38,88 @@ export default function TalkPage() {
         }
     }, [state]);
 
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const SpeechRecognition =
+                (window as any).SpeechRecognition ||
+                (window as any).webkitSpeechRecognition;
+
+            if (SpeechRecognition) {
+                const rec = new SpeechRecognition();
+                rec.continuous = true;
+                rec.interimResults = true;
+                rec.lang = "en-US";
+
+                rec.onresult = (event: any) => {
+                    let transcript = "";
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            transcript += event.results[i][0].transcript;
+                        }
+                    }
+                    if (transcript) {
+                        setInputText((prev) => (prev + " " + transcript).trim());
+                    }
+                };
+
+                rec.onerror = (event: any) => {
+                    console.error("Speech recognition error:", event.error);
+                    setError(`Voice input error: ${event.error}`);
+                    setState("idle");
+                };
+
+                rec.onend = () => {
+                    setState("idle");
+                };
+
+                recognitionRef.current = rec;
+            }
+        }
+    }, []);
+
     const handleMicClick = () => {
+        if (!recognitionRef.current) {
+            setError("Speech recognition is not supported in this browser.");
+            return;
+        }
+
         if (state === "idle") {
             setState("listening");
-            // Mock interaction
-            setTimeout(() => {
-                setState("processing");
-                setTimeout(() => {
-                    setState("preview");
-                }, 2000);
-            }, 3000);
+            setError(null);
+            recognitionRef.current.start();
         } else if (state === "listening") {
+            recognitionRef.current.stop();
             setState("processing");
             setTimeout(() => {
+                const text = inputRef.current?.value || inputText;
+                if (text.trim()) {
+                    const sentences = text
+                        .split(/[.!?\n]+/)
+                        .map((s) => s.trim())
+                        .filter((s) => s.length > 3);
+                    if (sentences.length > 0) {
+                        setBullets(sentences);
+                    } else {
+                        setBullets([text]);
+                    }
+                } else {
+                    setBullets([
+                        "No spoken content captured.",
+                        "Please try speaking again or type in the input area."
+                    ]);
+                }
                 setState("preview");
-            }, 2000);
+            }, 1000);
         }
     };
 
-    const handleContinue = async () => {
-        if (!inputText.trim()) return;
-        
+    const handleSave = async () => {
+        const contentToSave = state === "preview" || state === "edit"
+            ? bullets.join(". ")
+            : inputText;
+
+        if (!contentToSave.trim()) return;
+
         setState("processing");
         setError(null);
 
@@ -65,7 +127,7 @@ export default function TalkPage() {
             const res = await fetch("/api/memory", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ content: inputText }),
+                body: JSON.stringify({ content: contentToSave }),
             });
 
             if (!res.ok) {
@@ -82,6 +144,10 @@ export default function TalkPage() {
             setError(err.message || "Something went wrong");
             setState("idle");
         }
+    };
+
+    const handleContinue = () => {
+        handleSave();
     };
 
     const handleReset = () => {
@@ -305,7 +371,7 @@ export default function TalkPage() {
                                     </button>
 
                                     <button
-                                        onClick={handleReset}
+                                        onClick={handleSave}
                                         className="px-6 py-3 rounded-full border border-amber-500/30 text-amber-500 text-xs font-bold hover:bg-amber-500/10 transition-all flex items-center gap-2 shadow-[0_0_15px_-5px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_-5px_rgba(245,158,11,0.4)]"
                                     >
                                         <Check className="w-3.5 h-3.5" />

@@ -32,12 +32,16 @@ const sidebarItems = [
 ];
 
 interface SidebarProps {
+    session: any;
     isCollapsed: boolean;
     toggleCollapse: () => void;
 }
 
-export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
+export function Sidebar({ session, isCollapsed, toggleCollapse }: SidebarProps) {
     const pathname = usePathname();
+    const userName = session?.user?.name || "User";
+    const userEmail = session?.user?.email || "";
+    const userInitial = userName.charAt(0).toUpperCase();
 
     const handleLogout = () => {
         signOut({
@@ -151,7 +155,11 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         isCollapsed ? "justify-center p-2 mb-2" : "p-3 gap-3"
                     )}>
                         <div className="w-9 h-9 rounded-full bg-neutral-800 flex items-center justify-center border border-white/5 overflow-hidden shrink-0">
-                            <User className="w-4 h-4 text-neutral-400" />
+                            {session?.user?.image ? (
+                                <img src={session.user.image} alt={userName} className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-sm font-bold text-neutral-400">{userInitial}</span>
+                            )}
                         </div>
 
                         {!isCollapsed && (
@@ -163,10 +171,10 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                                         transition={{ delay: 0.1 }}
                                     >
                                         <p className="text-sm font-medium text-neutral-300 truncate group-hover:text-white transition-colors">
-                                            Anurag
+                                            {userName}
                                         </p>
                                         <p className="text-[10px] text-neutral-600 truncate">
-                                            Pro Member
+                                            {userEmail || "Pro Member"}
                                         </p>
                                     </motion.div>
                                 </div>

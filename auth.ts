@@ -4,62 +4,67 @@ import Google from "next-auth/providers/google"
 import clientPromise from "@/lib/mongodb"
 import bcrypt from "bcryptjs"
 
-if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-  throw new Error("Missing Google OAuth environment variables")
-}
+const providers: any[] = [
+  Credentials({
+    name: "Credentials",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" },
+    },
+    authorize: async (credentials) => {
+      if (!credentials?.email || !credentials?.password) return null
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [
+      const client = await clientPromise
+      const db = client.db()
+
+      // LOGIN ONLY
+      const user = await db
+        .collection("users")
+        .findOne({ email: credentials.email })
+
+      if (!user || !user.password) return null
+
+      // Ensure user is using credentials provider
+      if (user.authProvider && user.authProvider !== "credentials") {
+        // If the user signed up with Google but tries to log in with password
+        // In a real app we might want to support linking, but for now strict separation
+        throw new AuthError("ACCOUNT_PROVIDER_MISMATCH")
+      }
+
+      const isValid = await bcrypt.compare(
+        credentials.password as string,
+        user.password
+      )
+
+      if (!isValid) return null
+
+      // Check verification status
+      if (user.emailVerified === false) {
+        throw new AuthError("EMAIL_NOT_VERIFIED")
+      }
+
+      return {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+      }
+    },
+  }),
+]
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
-    Credentials({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      authorize: async (credentials) => {
-        if (!credentials?.email || !credentials?.password) return null
+    })
+  )
+} else {
+  console.warn("Google OAuth credentials missing; Google sign-in is disabled.")
+}
 
-        const client = await clientPromise
-        const db = client.db()
-
-        // LOGIN ONLY
-        const user = await db
-          .collection("users")
-          .findOne({ email: credentials.email })
-
-        if (!user || !user.password) return null
-
-        // Ensure user is using credentials provider
-        if (user.authProvider && user.authProvider !== "credentials") {
-          // If the user signed up with Google but tries to log in with password
-          // In a real app we might want to support linking, but for now strict separation
-          throw new AuthError("ACCOUNT_PROVIDER_MISMATCH")
-        }
-
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        )
-
-        if (!isValid) return null
-
-        // Check verification status
-        if (user.emailVerified === false) {
-          throw new AuthError("EMAIL_NOT_VERIFIED")
-        }
-
-        return {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-        }
-      },
-    }),
-  ],
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  providers,
 
   session: {
     strategy: "jwt",
